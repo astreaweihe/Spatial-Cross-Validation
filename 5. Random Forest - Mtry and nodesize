@@ -1,0 +1,70 @@
+#### Tune mtry and min nodesize parameter
+ntrees_to_try <- c(100) # Must still change according to which ntree resulted in lowest error
+
+# Create combinations of hyperparameters
+rf_grid <- expand.grid(mtry = 1:12, # Number of variables to consider at each split
+                       min.node.size = 1:8) #Default for regression is 5. Controls tree size (depth)
+
+
+# K fold CV (K = 8)
+for(i in 1:length(sim.data)){
+  for(j in 1:nrow(rf_grid)){
+    print(j)
+    ntrees <- ntrees_to_try[1]
+    mt <- rf_grid$mtry[j]
+    min.node <- rf_grid$min.node.size[j]
+    mse <- kfold_cv(model = "Random forest" , data = sim.data[[i]], K = 8)
+    
+    if(i ==1){
+      if(j==1){optimal.rf.1 <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.1 <-  rbind(optimal.rf.1, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+    
+    if(i ==2){
+      if(j==1){optimal.rf.2 <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.2 <-  rbind(optimal.rf.2, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+    
+    else{
+      if(j==1){optimal.rf.3 <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.3 <-  rbind(optimal.rf.3, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+  }}
+
+optimal.rf.K <- rbind(optimal.rf.1[which.min(optimal.rf.1$error),], optimal.rf.2[which.min(optimal.rf.2$error),], optimal.rf.3[which.min(optimal.rf.3$error),])
+optimal.rf.K <- cbind(SIM = sim, optimal.rf.K)
+
+
+# Spatial Cross Validation (Blocks = 8)
+
+for(i in 1:length(sim.data)){
+  for(j in 1:nrow(rf_grid)){
+    print(j)
+    ntrees <- ntrees_to_try[1]
+    mt <- rf_grid$mtry[j]
+    min.node <- rf_grid$min.node.size[j]
+    
+    mse <- blocking_cv(model = "Random forest" , data = sim.data[[i]], block.size = c(25,50))
+    
+    if(i ==1 ){
+      if(j==1){optimal.rf.1.B <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.1.B <- rbind(optimal.rf.1.B, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+    
+    if(i ==2){
+      if(j==1){optimal.rf.2.B <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.2.B <- rbind(optimal.rf.2.B, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+    
+    else{
+      if(j==1){optimal.rf.3.B <- data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node)}
+      else{optimal.rf.3.B <- rbind(optimal.rf.3.B, data.frame(error = mse, ntrees, mtry = mt, min.node.size = min.node))}
+    }
+  }}
+
+optimal.rf.B <- rbind(optimal.rf.1.B[which.min(optimal.rf.1.B$error),], optimal.rf.2.B[which.min(optimal.rf.2.B$error),], optimal.rf.3.B[which.min(optimal.rf.3.B$error),])
+optimal.rf.B <- cbind(SIM = sim, optimal.rf.B)
+
+
+#### Save output
+save(optimal.rf.1, optimal.rf.2, optimal.rf.3, optimal.rf.1.B, optimal.rf.2.B, optimal.rf.3.B, optimal.rf.K, optimal.rf.B, file="RF mtry_minnode.Rdata")
