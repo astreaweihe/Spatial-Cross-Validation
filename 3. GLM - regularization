@@ -1,0 +1,62 @@
+#### GLM
+# Lambdas to try out - Regularization parameter
+lambdas_to_try <- c(0, 10^seq(-5, -1, length.out = 200))
+lambdas_to_try
+
+
+#### K Fold CV (K=10)
+for(i in 1:length(sim.data)){
+  
+  for(l in 1:length(lambdas_to_try)){
+  
+  lam = lambdas_to_try[l]
+  er = kfold_cv(model = "GLM", data = sim.data[[i]])
+  
+  if(i == 1){
+    if(l==1){optimal.lam.1 <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.1 <- rbind(optimal.lam.1, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }
+  
+  if(i == 2){
+    if(l==1){optimal.lam.2 <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.2 <- rbind(optimal.lam.2, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }
+  
+  else{
+    if(l==1){optimal.lam.3 <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.3 <- rbind(optimal.lam.3, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }}}
+
+optimal.lam.K <- rbind(optimal.lam.1[which.min(optimal.lam.1$CV_Error),], optimal.lam.2[which.min(optimal.lam.2$CV_Error),], optimal.lam.3[which.min(optimal.lam.3$CV_Error),])
+optimal.lam.K <- cbind(SIM = sim, optimal.lam.K)
+
+
+#### Spatial Cross Validation (Blocks = 10)
+for(i in 1:length(sim.data)){
+  
+  for(l in 1:length(lambdas_to_try)){
+  
+  lam = lambdas_to_try[l]
+  er = blocking_cv(block.size = c(20,50), "GLM", data = sim.data[[i]])
+  
+  if(i == 1){
+    if(l==1){optimal.lam.1.B <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.1.B <- rbind(optimal.lam.1.B, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }
+  
+  if(i == 2){
+    if(l==1){optimal.lam.2.B <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.2.B <- rbind(optimal.lam.2.B, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }
+  
+  else{
+    if(l==1){optimal.lam.3.B <- data.frame(Lambda=lambdas_to_try[1], CV_Error = er)}
+  else{optimal.lam.3.B <- rbind(optimal.lam.3.B, data.frame(Lambda=lambdas_to_try[l], CV_Error = er))}
+  }}}
+
+optimal.lam.B <- rbind(optimal.lam.1.B[which.min(optimal.lam.1.B$CV_Error),], optimal.lam.2.B[which.min(optimal.lam.2.B$CV_Error),], optimal.lam.3.B[which.min(optimal.lam.3.B$CV_Error),])
+optimal.lam.B <- cbind(SIM = sim, optimal.lam.B)
+
+
+#### Save output
+save(optimal.lam.1, optimal.lam.2, optimal.lam.3,optimal.lam.1.B, optimal.lam.2.B, optimal.lam.3.B,optimal.lam.K, optimal.lam.B, file="GLM output.Rdata")
