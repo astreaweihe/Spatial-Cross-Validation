@@ -1,0 +1,116 @@
+#### Nodes
+nodes_to_try <- c(seq(1,2,1))
+sim = c("LOW", "MED", "HIGH")
+iterations = 2
+
+#### K fold cross validation
+nn.results.K <- data.frame()
+nn.pred.error.K <- data.frame()
+
+optimal.nodes.1<-data.frame()
+optimal.nodes.2<-data.frame()
+optimal.nodes.3<-data.frame()
+
+for(i in 1:iterations){
+  for(i in 1:length(sim.data)){
+    for(j in 1:length(nodes_to_try)){
+    
+      num_nodes = nodes_to_try[j]
+      mse <- kfold_cv(model = "Neural Net", data = sim.data[[i]], K = 8)
+    
+      nn.results.K <- rbind(nn.results.K, data.frame(sim = i, nodes = nodes_to_try[j], error = mse))
+        
+      if(i == 1){
+        optimal.nodes.1 <- rbind(optimal.nodes.1, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+  
+      if(i == 2){
+        optimal.nodes.2 <- rbind(optimal.nodes.2, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+  
+      if(i ==3){
+        optimal.nodes.3 <- rbind(optimal.nodes.3, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+    }
+  }
+}
+ave1<-c()
+ave2<-c()
+ave3<-c()
+
+for(i in 1:length(nodes_to_try)){
+  ave1 <- c(ave1, mean(optimal.nodes.1[which(optimal.nodes.1$nodes==nodes_to_try[i]),]$CV_Error))
+}
+for(i in 1:length(nodes_to_try)){
+  ave2 <- c(ave2, mean(optimal.nodes.2[which(optimal.nodes.2$nodes==nodes_to_try[i]),]$CV_Error))
+}
+for(i in 1:length(nodes_to_try)){
+  ave3 <- c(ave3, mean(optimal.nodes.3[which(optimal.nodes.3$nodes==nodes_to_try[i]),]$CV_Error))
+}
+optimal.nodes.1.ave.K <- data.frame(nodes = nodes_to_try, CV_Error = ave1)
+optimal.nodes.2.ave.K <- data.frame(nodes = nodes_to_try, CV_Error = ave2)
+optimal.nodes.3.ave.K <- data.frame(nodes = nodes_to_try, CV_Error = ave3)
+
+optimal.nodes.K <- rbind(optimal.nodes.1.ave.K[which.min(optimal.nodes.1.ave.K$CV_Error),], optimal.nodes.2.ave.K[which.min(optimal.nodes.2.ave.K$CV_Error),], optimal.nodes.3.ave.K[which.min(optimal.nodes.3.ave.K$CV_Error),])
+optimal.nodes.K <- cbind(SIM = sim, optimal.nodes.K)
+
+#### Spatial Cross Validation
+nn.results.B <- data.frame()
+
+optimal.nodes.1.B <- data.frame()
+optimal.nodes.2.B <- data.frame()
+optimal.nodes.3.B <- data.frame()
+
+optimal.nodes.1.ave.B <- data.frame()
+optimal.nodes.2.ave.B <- data.frame()
+optimal.nodes.3.ave.B <- data.frame()
+
+
+for(i in 1:iterations){
+  for(i in 1:length(sim.data)){
+    for(j in 1:length(nodes_to_try)){
+    
+      num_nodes = nodes_to_try[j]
+    
+      mse <- blocking_cv(model = "Neural Net", data = sim.data[[i]], block.size = c(25,50))
+    
+      nn.results.B <- rbind(nn.results.B, data.frame(sim = i, nodes = nodes_to_try[j], CV_error = mse))
+    
+      if(i == 1){
+        optimal.nodes.1.B <- rbind(optimal.nodes.1.B, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+  
+      if(i == 2){
+        optimal.nodes.2.B <- rbind(optimal.nodes.2.B, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+  
+      if(i == 3){
+        optimal.nodes.3.B <- rbind(optimal.nodes.3.B, data.frame(nodes=nodes_to_try[j], CV_Error = mse))
+      }
+    }
+  }
+}
+
+ave1.B<-c()
+ave2.B<-c()
+ave3.B<-c()
+
+for(i in 1:length(nodes_to_try)){
+  ave1.B <- c(ave1.B, mean(optimal.nodes.1.B[which(optimal.nodes.1.B$nodes==nodes_to_try[i]),]$CV_Error))
+}
+for(i in 1:length(nodes_to_try)){
+  ave2.B <- c(ave2.B, mean(optimal.nodes.2.B[which(optimal.nodes.2.B$nodes==nodes_to_try[i]),]$CV_Error))
+}
+for(i in 1:length(nodes_to_try)){
+  ave3.B <- c(ave3.B, mean(optimal.nodes.3.B[which(optimal.nodes.3.B$nodes==nodes_to_try[i]),]$CV_Error))
+}
+
+optimal.nodes.1.ave.B <- data.frame(nodes = nodes_to_try, CV_Error = ave1.B)
+optimal.nodes.2.ave.B <- data.frame(nodes = nodes_to_try, CV_Error = ave2.B)
+optimal.nodes.3.ave.B <- data.frame(nodes = nodes_to_try, CV_Error = ave3.B)
+
+optimal.nodes.B <- rbind(optimal.nodes.1.ave.B[which.min(optimal.nodes.1.ave.B$CV_Error),], optimal.nodes.2.ave.B[which.min(optimal.nodes.2.ave.B$CV_Error),], optimal.nodes.3.ave.B[which.min(optimal.nodes.3.ave.B$CV_Error),])
+optimal.nodes.B <- cbind(SIM = sim, optimal.nodes.B)
+
+#### Save output
+save(optimal.nodes.1, optimal.nodes.2, optimal.nodes.3, optimal.nodes.1.B, optimal.nodes.2.B, optimal.nodes.3.B, optimal.nodes.K, optimal.nodes.B, optimal.nodes.1.ave.K, optimal.nodes.2.ave.K, optimal.nodes.3.ave.K, optimal.nodes.1.ave.B, optimal.nodes.2.ave.B,optimal.nodes.3.ave.B,file="NN nodes output.Rdata")
