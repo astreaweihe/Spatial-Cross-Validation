@@ -1,0 +1,64 @@
+#### Optimal number of trees
+ntrees_to_try <- c(100, 200, 300, 400, 500, 600)
+
+# K fold CV (K = 8)
+for(i in 1:length(sim.data)){
+  for(j in 1:length(ntrees_to_try)){
+    print(j)
+    ntrees <- ntrees_to_try[j]
+    mt = 4
+    min.node = 5
+    mse <- kfold_cv(model = "Random forest" , mtry = mt, nodesize = min.node, data = sim.data[[i]], K = 8)
+    
+    if(i ==1 ){
+      if(j==1){optimal.ntrees.1 <- data.frame(error = mse, ntrees)}
+    else{optimal.ntrees.1 <- rbind(optimal.ntrees.1, data.frame(error = mse, ntrees))}
+    }
+    
+    if(i ==2){
+      if(j==1){optimal.ntrees.2 <- data.frame(error = mse, ntrees)}
+      else{optimal.ntrees.2 <- rbind(optimal.ntrees.2, data.frame(error = mse, ntrees))}
+    }
+    
+    else{
+      if(j==1){optimal.ntrees.3 <- data.frame(error = mse, ntrees)}
+      else{optimal.ntrees.3 <- rbind(optimal.ntrees.3, data.frame(error = mse, ntrees))}
+    }
+  }}
+
+optimal.ntrees.K <- rbind(optimal.ntrees.1[which.min(optimal.ntrees.1$error),], optimal.ntrees.2[which.min(optimal.ntrees.2$error),], optimal.ntrees.3[which.min(optimal.ntrees.3$error),])
+optimal.ntrees.K <- cbind(SIM = sim, optimal.ntrees.K)
+
+
+# Spatial Cross Validation (Blocks = 8)
+for(i in 1:length(sim.data)){
+  for(j in 1:length(ntrees_to_try)){
+    print(j)
+    
+    mt = 4
+    min.node = 5
+    ntrees <- ntrees_to_try[j]
+    mse <- blocking_cv(model = "Random forest" , mtry = mt, nodesize = min.node, data = sim.data[[i]], block.size = c(25,50))
+    
+   if(i ==1 ){
+      if(j==1){optimal.ntrees.1.B <- data.frame(error = mse, ntrees)}
+    else{optimal.ntrees.1.B <- rbind(optimal.ntrees.1.B, data.frame(error = mse, ntrees))}
+    }
+    
+    if(i ==2){
+      if(j==1){optimal.ntrees.2.B <- data.frame(error = mse, ntrees)}
+      else{optimal.ntrees.2.B <- rbind(optimal.ntrees.2.B, data.frame(error = mse, ntrees))}
+    }
+    
+    else{
+      if(j==1){optimal.ntrees.3.B <- data.frame(error = mse, ntrees)}
+      else{optimal.ntrees.3.B <- rbind(optimal.ntrees.3.B, data.frame(error = mse, ntrees))}
+  }
+  }}
+
+optimal.ntrees.B <- rbind(optimal.ntrees.1.B[which.min(optimal.ntrees.1.B$error),], optimal.ntrees.2.B[which.min(optimal.ntrees.2.B$error),], optimal.ntrees.3.B[which.min(optimal.ntrees.3.B$error),])
+optimal.ntrees.B <- cbind(SIM = sim, optimal.ntrees.B)
+
+#### Save output
+save(optimal.ntrees.1, optimal.ntrees.2, optimal.ntrees.3, optimal.ntrees.1.B, optimal.ntrees.2.B, optimal.ntrees.3.B, optimal.ntrees.K, optimal.ntrees.B, file="RF ntrees output.Rdata")
+```
