@@ -1,0 +1,119 @@
+pacman::p_load(skimr, sf, sp, geoR,  gstat, stars, automap, intamap,  tidyverse,tmap, tmaptools, spData, rgdal, raster, maptools, GGally, ggplot2, spatstat)
+ 
+# Random Gaussian fields
+#install.packages("RandomFields")
+library(RandomFields)
+
+# Random Forests
+#install.packages("randomForest")
+library(randomForest)
+
+# Moran's I calculation
+#install.packages("spdep")
+library(spdep)
+
+# Regularized GLM
+#install.packages("glmnet")
+library(glmnet)
+
+# Neural Net
+#install.packages("nnet")
+library(nnet)
+
+
+## Create a grid 100x100
+size <- c(100,100)
+x_vec <- seq(1, 100, len = size[1])
+y_vec <- seq(1, 100, len = size[2])
+Field <- expand.grid(x = x_vec, y = y_vec)
+
+sim = c("LOW", "MED", "HIGH")
+
+
+## Simulate spatial environment (explanatory variables)
+set.seed(1)
+# Want to generate data with varying amounts of spatial autocorrelation
+# Use different ranges. Larger range = more autocorrelation
+ranges <- c(1,4, 18)
+ 
+for (i in 1:length(ranges)){
+ 
+# Topography
+  CM <- RMexp(var = 0.1, scale = ranges[i]) # Covariance model
+  v1 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v1 <- scale(v1)
+ 
+  v1 <- v1 + (-floor(min(v1)))
+ 
+# Precipitation has a higher variance
+  CM <- RMexp(var = 0.3, scale = ranges[i])
+  v2 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v2 <- scale(v2)
+ 
+  # Make positive (can't have negative precipitation)
+  v2 <- v2 + (-floor(min(v2)))
+ 
+# Sun has a longer range
+  CM <- RMexp(var = 0.1, scale = 4)
+  v3 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v3 <- scale(v3)
+ 
+  # Make positive (can't have negative sunlight )
+  v3 <- v3 + (-floor(min(v3)))
+ 
+# Temperature is a function of sun
+  v4 <- log(v3) + 7 + rnorm(1)
+  v4 <- scale(v4)
+ 
+# Nutrients is a linear combination of soil, precip, temp and soil*precip
+  v5 <- v1 + v2 + v4 + v1*v2
+  v5 <- scale(v5)
+
+  v6 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v6 <- scale(v6)
+ 
+# Gaussian dependence on temperature
+  v7 <- 1/(sqrt(2*pi))*exp(-(v4^2/4))
+  v7 <- scale(v7)
+ 
+# Gaussian dependence on precipitation
+  v8 <- 1/(sqrt(2*pi))*exp(-(v2^2/4))
+  v8 <- scale(v8)
+ 
+# Add some random variables as additional material for overfitting
+CM <- RMexp(var = 0.1, scale = ranges[i])
+  v9 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v9 <- scale(v9)
+  v9 <- v9 + (-floor(min(v9)))
+  
+  v10 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v10 <- scale(v10)
+  
+CM <- RMexp(var = 0.2, scale = ranges[i] + 3)
+  v11 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v11 <- scale(v11)
+  v11 <- v11 + (-floor(min(v11)))
+  
+CM <- RMgauss(var = 0.1, scale = 4)
+  v12 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v12 <- scale(v12)
+  v12 <- v12 + (-floor(min(v12)))
+  
+  v13 <- as.vector(t(RFsimulate(CM, x = x_vec, y = y_vec, spConform = FALSE)))
+  v13 <- scale(v13)
+   
+ # Make response variable (tree height)
+  z <- v1 + v5 + v7 + v8
+  z <- scale(z)
+ 
+  # Make positive
+  z <- z + (-floor(min(z)))
+   
+data <- data.frame(cbind(z, Field, v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13))
+names(data) <- c("z","x", "y", "v1","v2","v3","v4","v5","v6","v7","v8","v9","v10","v11","v12","v13")
+ 
+if(i==1){sim.data <- list()}
+  sim.data[[i]] <- data.frame(data)
+}
+
+save(sim.data, file="Complete simulated data.Rdata")
