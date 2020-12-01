@@ -117,3 +117,51 @@ if(i==1){sim.data <- list()}
 }
 
 save(sim.data, file="Complete simulated data.Rdata")
+
+
+# Make spatial points df & spatial pixels df
+for (i in 1:length(sim.data)){
+ 
+# Point data frame
+data <- sim.data[[i]]
+coords <- SpatialPoints(data[, c("x", "y")])
+data.point <- SpatialPointsDataFrame(coords, data)
+proj4string(data.point) <- CRS()
+ 
+if(i==1){data.point.list <- list()}
+  data.point.list[[i]] <- data.point
+ 
+# Spatial pixels data frame
+data.grid.sp <- SpatialPixelsDataFrame(points = Field[c("x", "y")],
+                                  data = data.frame(data.point),
+                                  proj4string = CRS())
+proj4string(data.grid.sp) <- CRS()
+ 
+if(i==1){data.grid.sp.list <- list()}
+  data.grid.sp.list[[i]] <- data.grid.sp
+}
+
+## Measure autocorrelation 
+# Moran I function
+data.p.list   <- list()
+I.list        <- list()
+moran.list    <- list()
+nb.list       <- list()
+lw.list       <- list()
+ 
+for(i in 1:length(sim.data)){
+  # converting to spatial polygons
+  data.p.list[[i]] <- as(data.grid.sp.list[[i]], "SpatialPolygonsDataFrame")
+ 
+  #defining neighboring polygons
+  nb.list[[i]] <- poly2nb(data.p.list[[i]], queen=TRUE)
+ 
+  # assign weights to neighbors
+  lw.list[[i]] <- nb2listw(nb.list[[i]], style="W", zero.policy=TRUE)
+ 
+  #Computing the Moran’s I statistic
+  I.list[[i]] <- moran(data.p.list[[i]]$z, lw.list[[i]], length(nb.list[[i]]), Szero(lw.list[[i]]))[1]
+ 
+  #Performing hypothesis test
+  moran.list[[i]] <- moran.test(data.p.list[[i]]$z, lw.list[[i]], alternative="greater")
+}
