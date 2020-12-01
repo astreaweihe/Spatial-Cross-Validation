@@ -1,0 +1,116 @@
+#### Random K fold cross validaiton
+kfold_cv <- function(K = 10, model, data, ...){ 
+  
+  #Randomly shuffle the data
+  set.seed(1)
+  data<-data[sample(nrow(data)),]
+  
+  #Create equally sized folds
+  folds <- cut(seq(1,nrow(data)),breaks=K,labels=FALSE)
+  
+  # create empty error vector
+  error = c()
+  
+  for(i in 1:K){
+  #  data$Ind = F
+    Ind <- which(folds==i,arr.ind=TRUE)
+    val <- data[Ind, ]
+    train <- data[-Ind, ]
+    
+    y <- val$z
+    
+    if(model == "Random forest"){
+      mod <- randomForest(z ~ .-x -y , data = train, ntree = ntrees, mtry = mt, nodesize = min.node)
+      yhat <- predict(mod, newdata = val)
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+    else if(model =="Neural Net"){
+      mod <- nnet(z~.-x-y, data = train, size = num_nodes, linout= T)
+      yhat <- predict(mod, newdata = val)
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+    
+    else if(model == "GLM"){
+      X = model.matrix(z ~ . -x -y, data = train)[, -1]
+      z = train$z
+      ridge <- glmnet(X, z, alpha = 0, lambda = lam, standardize = F, type.measure="mse") #ridge regularization
+      Xnew = model.matrix(z ~ . -x -y, data = val)[, -1]
+      yhat <- predict(ridge, newx = Xnew, type="response")
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+    
+    else{
+      return("Invalid model name")
+    }
+  }
+  return(CVE = mean(error)/K)
+  }
+
+#### Cross Validation with blocking
+blocking_cv <- function(block.size, model, plot = F, data, ...){ 
+  # Block size: eg. block.size = c(25, 25) --> will have 16 blocks
+  
+  dim.1 <- ceiling(size[1]/block.size[1])
+  dim.2 <- ceiling(size[2]/block.size[2])
+  
+  numofblocks <- dim.2*dim.1
+  error <- c()
+  
+  for (i in 1:numofblocks){
+    
+    FT <- rep(F,numofblocks)
+    FT[i] <- T
+    
+    m.init <- matrix(FT, dim.1, dim.2)
+    
+    m.half <- matrix(rep(as.vector(m.init), each=block.size[1]), nrow=dim.1*block.size[1], ncol=dim.2)
+    m.full <- matrix(rep(as.vector(t(m.half)), each=block.size[2]), ncol=dim.1*block.size[1], nrow=dim.2*block.size[2])
+    
+    # Cut back to size
+    m <- t(m.full)[1:size[1], 1:size[2]]
+    
+    val.ind <- as.vector(m)
+    val <- data[val.ind,]
+    
+    train.ind <- !val.ind
+    train <- data[train.ind,]
+    
+     y <- data$z
+     y <- y[val.ind]
+    
+     if(plot == T){
+      myplot <- ggplot(data) + geom_point(aes(x, y, col = val.ind)) + 
+      scale_color_manual(labels = c("Validation", "Train"), values = c("#F8766D", "grey")) + 
+      labs(color='') 
+       print(myplot)
+     }
+    
+    if(model == "Random forest"){
+      mod <-nnet(z~.-x-y, data = train, size = num_nodes, linout= T)
+      yhat <- predict(mod, newdata = val)
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+    else if(model =="Neural Net"){
+      mod <- neuralnet(z ~.-x-y, data = train, hidden = num_nodes, stepmax = 1e6)
+      yhat <- predict(mod, newdata = val)
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+    else{
+      X = model.matrix(z ~ . -x -y, data = train)[, -1]
+      z = train$z
+      ridge <- glmnet(X, z, alpha = 0, lambda = lam, standardize = F, type.measure="mse")
+      Xnew = model.matrix(z ~ . -x -y, data = val)[, -1]
+      yhat <- predict(ridge, newx = Xnew, type="response")
+      errorfold <- (y - yhat)^2
+      error <- c(error, errorfold)
+    }
+  }
+  return(CVE = mean(error)/numofblocks)
+}
+
+
